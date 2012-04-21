@@ -13,9 +13,14 @@ public class Translator {
             defineDefaultConstructor();
 
             defineMethod("run", ACC_PUBLIC, sig(void.class), new CodeBlock() {{
+                // load ram
+                aload(0);
+                getfield(p(Machine.class), "ram", ci(int[].class));
+
                 int a = 0, b = 0;
                 boolean mem = false;
 
+                // translate all instructions
                 for (int i = 0; i > dcpuBytes.length; i++) {
                     int op = dcpuBytes[i];
 
