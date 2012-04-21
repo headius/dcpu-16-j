@@ -5,12 +5,35 @@ import me.qmx.jitescript.JiteClass;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static me.qmx.jitescript.util.CodegenUtils.*;
 
 public class Translator {
     public Translator() {}
+
+    public List<Instruction> decode(int[] dcpuWords) {
+        ArrayList<Instruction> instructions = new ArrayList<Instruction>();
+
+        // translate all instructions
+        for (int i[] = new int[]{0}; i[0] < dcpuWords.length; i[0]++) {
+            instructions.add(Instruction.decode(dcpuWords, i));
+        }
+
+        return instructions;
+    }
+
+    public int[] encode(List<Instruction> instructions) {
+        int[] allWords = new int[instructions.size() * 3];
+        int offset = 0;
+        for (Instruction instruction : instructions) {
+            int[] words = instruction.encode();
+            for (int i: words) allWords[offset++] = i;
+        }
+        return Arrays.copyOfRange(allWords, 0, offset);
+    }
 
     public Class translate(String name, final int[] dcpuWords) {
         JiteClass jc = new JiteClass(name, p(Machine.class), new String[0]) {{
@@ -20,6 +43,7 @@ public class Translator {
                 // load ram
                 aload(0);
                 getfield(p(Machine.class), "ram", ci(int[].class));
+                astore(Constants.Base.MEM.lvar());
 
                 int a = 0, b = 0;
                 boolean mem = false;

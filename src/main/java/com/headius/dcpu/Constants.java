@@ -55,7 +55,11 @@ public class Constants {
         public String toString(int value) {
             switch (modifier) {
                 case MEM:
-                    return "[" + base + "]";
+                    if (base == Base.NEXT) {
+                        return "[0x" + Integer.toHexString(value) + "]";
+                    } else {
+                        return "[" + base.toString() + "]";
+                    }
                 case NEXT:
                     return "[" + base + "0x" + Integer.toHexString(value) + "]";
                 case NONE:
@@ -79,8 +83,4 @@ public class Constants {
     public enum Opcode {
         NON, SET, ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, BOR, XOR, IFE, IFG, IFB;
     }
-
-    ;//,
-
-    ;
 }

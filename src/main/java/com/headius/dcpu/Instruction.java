@@ -130,20 +130,19 @@ public abstract class Instruction {
     public static Instruction decode(int[] dcpuWords, int[] i) {
         int instrWord = dcpuWords[i[0]];
 
-        Constants.Location target = Constants.Location.decode(instrWord >>> 10);
+        Constants.Location target = Constants.Location.values()[instrWord >>> 10];
         int tvalue = 0;
-        Constants.Location source = Constants.Location.decode((instrWord >>> 4) & 0x3F);
+        Constants.Location source = Constants.Location.values()[(instrWord >>> 4) & 0x3F];
         int svalue = 0;
         Constants.Opcode opcode = Constants.Opcode.values()[instrWord & 0xF];
-
-        if (target.base() == Constants.Base.NEXT) {
-            tvalue = dcpuWords[++i[0]];
-        }
 
         if (source.base() == Constants.Base.NEXT) {
             svalue = dcpuWords[++i[0]];
         }
 
+        if (target.base() == Constants.Base.NEXT) {
+            tvalue = dcpuWords[++i[0]];
+        }
 
         switch (opcode) {
             case SET:
@@ -224,10 +223,45 @@ public abstract class Instruction {
 
     public Constants.Opcode opcode() { return opcode; }
     public Constants.Location target() { return target; }
+    public int tvalue() { return tvalue; }
     public Constants.Location source() { return source; }
+    public int svalue() { return svalue; }
 
     public String toString() {
         return opcode + " " + target.toString(tvalue) + " " + source.toString(svalue);
+    }
+
+    public int[] encode() {
+        int instr = (source.ordinal() << 10) | (target.ordinal() << 4) | opcode.ordinal();
+
+        boolean tnext = target.base() == Constants.Base.NEXT || target.modifier() == Constants.Modifier.NEXT;
+        boolean snext = source.base() == Constants.Base.NEXT || source.modifier() == Constants.Modifier.NEXT;
+
+        if (tnext) {
+            if (snext) {
+                return new int[]{instr, tvalue, svalue};
+            } else {
+                return new int[]{instr, tvalue};
+            }
+        } else {
+            if (snext) {
+                return new int[]{instr, svalue};
+            } else {
+                return new int[]{instr};
+            }
+        }
+    }
+
+    public boolean equals(Object other) {
+        if (!(other instanceof Instruction)) return false;
+
+        Instruction otherInstruction = (Instruction)other;
+
+        return opcode == otherInstruction.opcode &&
+                target == otherInstruction.target &&
+                tvalue == otherInstruction.tvalue &&
+                source == otherInstruction.source &&
+                svalue == otherInstruction.svalue;
     }
 
     protected final Constants.Opcode opcode;
