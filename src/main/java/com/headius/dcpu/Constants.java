@@ -1,218 +1,86 @@
 package com.headius.dcpu;
 
-import me.qmx.jitescript.CodeBlock;
-
 public class Constants {
     public static final int RAMSIZE = 0x10000;
     public static final int LVAR_OFFSET = 1;
 
-    public enum Register {
-        A, B, C, X, Y, Z, I, J, SP, PC, O, NONE;
+    public enum Base {
+        A, B, C, X, Y, Z, I, J, SP, PC, O, NEXT, MEM;
 
         public int lvar() {return ordinal() + LVAR_OFFSET;}
     };
-    public enum Deref {NONE, MEM, NEXT}
+    public enum Modifier {NONE, MEM, NEXT, INC, DEC}
 
     public enum Location {
-        A_REG(Register.A, Deref.NONE),
-        B_REG(Register.B, Deref.NONE),
-        C_REG(Register.C, Deref.NONE),
-        X_REG(Register.X, Deref.NONE),
-        Y_REG(Register.Y, Deref.NONE),
-        Z_REG(Register.Z, Deref.NONE),
-        I_REG(Register.I, Deref.NONE),
-        J_REG(Register.J, Deref.NONE),
-        A_MEM(Register.A, Deref.MEM),
-        B_MEM(Register.B, Deref.MEM),
-        C_MEM(Register.C, Deref.MEM),
-        X_MEM(Register.X, Deref.MEM),
-        Y_MEM(Register.Y, Deref.MEM),
-        Z_MEM(Register.Z, Deref.MEM),
-        I_MEM(Register.I, Deref.MEM),
-        J_MEM(Register.J, Deref.MEM),
-        A_NEXT(Register.A, Deref.NEXT),
-        B_NEXT(Register.B, Deref.NEXT),
-        C_NEXT(Register.C, Deref.NEXT),
-        X_NEXT(Register.X, Deref.NEXT),
-        Y_NEXT(Register.Y, Deref.NEXT),
-        Z_NEXT(Register.Z, Deref.NEXT),
-        I_NEXT(Register.I, Deref.NEXT),
-        J_NEXT(Register.J, Deref.NEXT),
-        MEM(Register.NONE, Deref.MEM),
-        VAL(Register.NONE, Deref.NONE),
-        SP(Register.SP, Deref.NONE),
-        PC(Register.PC, Deref.NONE),
-        O(Register.O, Deref.NONE);
+        A_REG(Base.A, Modifier.NONE),
+        B_REG(Base.B, Modifier.NONE),
+        C_REG(Base.C, Modifier.NONE),
+        X_REG(Base.X, Modifier.NONE),
+        Y_REG(Base.Y, Modifier.NONE),
+        Z_REG(Base.Z, Modifier.NONE),
+        I_REG(Base.I, Modifier.NONE),
+        J_REG(Base.J, Modifier.NONE),
+        A_MEM(Base.A, Modifier.MEM),
+        B_MEM(Base.B, Modifier.MEM),
+        C_MEM(Base.C, Modifier.MEM),
+        X_MEM(Base.X, Modifier.MEM),
+        Y_MEM(Base.Y, Modifier.MEM),
+        Z_MEM(Base.Z, Modifier.MEM),
+        I_MEM(Base.I, Modifier.MEM),
+        J_MEM(Base.J, Modifier.MEM),
+        A_NEXT(Base.A, Modifier.NEXT),
+        B_NEXT(Base.B, Modifier.NEXT),
+        C_NEXT(Base.C, Modifier.NEXT),
+        X_NEXT(Base.X, Modifier.NEXT),
+        Y_NEXT(Base.Y, Modifier.NEXT),
+        Z_NEXT(Base.Z, Modifier.NEXT),
+        I_NEXT(Base.I, Modifier.NEXT),
+        J_NEXT(Base.J, Modifier.NEXT),
+        POP(Base.SP, Modifier.INC),
+        PEEK(Base.SP, Modifier.NONE),
+        PUSH(Base.SP, Modifier.DEC),
+        SP(Base.SP, Modifier.NONE),
+        PC(Base.PC, Modifier.NONE),
+        O(Base.O, Modifier.NONE),
+        NEXT_MEM(Base.NEXT, Modifier.MEM),
+        NEXT(Base.NEXT, Modifier.NONE);
 
         public static Location decode(int location) {
-            if (location < MEM.ordinal()) {
-                if (location == 0x1b) return SP;
-                if (location == 0x1c) return PC;
-                if (location == 0x1d) return O;
-                return values()[location];
-            }
-            return MEM;
+            return values()[location];
         }
 
-        public Register register() {return register;}
-        public Deref deref() {return deref;}
+        public Base base() {return base;}
+        public Modifier modifier() {return modifier;}
 
-        private final Register register;
-        private final Deref deref;
-        private Location(Register register, Deref deref) {
-            this.register = register;
-            this.deref = deref;
+        public String toString(int value) {
+            switch (modifier) {
+                case MEM:
+                    return "[" + base + "]";
+                case NEXT:
+                    return "[" + base + "0x" + Integer.toHexString(value) + "]";
+                case NONE:
+                    if (base == Base.NEXT) {
+                        return "0x" + Integer.toHexString(value);
+                    } else {
+                        return base.toString();
+                    }
+            }
+            return null;
+        }
+
+        private final Base base;
+        private final Modifier modifier;
+        private Location(Base base, Modifier modifier) {
+            this.base = base;
+            this.modifier = modifier;
         }
     }
 
     public enum Opcode {
-        NON {
-            public void translate(CodeBlock cb, int op, int a, int b) {
+        NON, SET, ADD, SUB, MUL, DIV, MOD, SHL, SHR, AND, BOR, XOR, IFE, IFG, IFB;
+    }
 
-            }
-        },
-        SET {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-                load(cb, b);
-                store(cb, a);
-            }
-        },
-        ADD {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-                load(cb, b);
-                cb.iadd();
-                cb.dup();
-                cb.pushInt(8);
-                cb.ishr();
-                cb.istore(Register.O.ordinal());
-                store(cb, a);
-            }
-        },
-        SUB {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-                load(cb, b);
-                cb.iadd();
-                cb.dup();
-                cb.pushInt(8);
-                cb.ishr();
-                cb.istore(Register.O.lvar());
-                store(cb, a);
-            }
-        },
-        MUL {
-            public void translate(CodeBlock cb, int op, int a, int b) {
+    ;//,
 
-            }
-        },
-        DIV {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        MOD {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        SHL {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        SHR {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        AND {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        BOR {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        XOR {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        IFE {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        IFG {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        },
-        IFB {
-            public void translate(CodeBlock cb, int op, int a, int b) {
-
-            }
-        };
-
-        private static void load(CodeBlock cb, int loc) {
-            Location location = Location.decode(loc);
-
-            switch (location.deref()) {
-                case NONE:
-                    switch (location.register()) {
-                        case NONE:
-                            cb.ldc(location);
-                            break;
-                        default:
-                            cb.iload(location.register().lvar());
-                    }
-                    break;
-                case MEM:
-                    cb.aload(Register.NONE.lvar());
-                    switch (location.register()) {
-                        case NONE:
-                            cb.pushInt(loc);
-                            break;
-                        default:
-                            cb.iload(location.register().lvar());
-                    }
-                    cb.iaload();
-                    break;
-                case NEXT:
-                    // todo
-            }
-        }
-
-        private static void store(CodeBlock cb, int loc) {
-            Location location = Location.decode(loc);
-            switch (location.deref()) {
-                case NONE:
-                    switch (location.register()) {
-                        case NONE:
-                            throw new ClassFormatError();
-                        default:
-                            cb.istore(location.register().lvar());
-                    }
-                    break;
-                case MEM:
-                    cb.aload(Register.NONE.ordinal());
-                    switch (location.register()) {
-                        case NONE:
-                            cb.pushInt(loc);
-                            break;
-                        default:
-                            cb.iload(location.register().lvar());
-                    }
-                    cb.dup2_x1();
-                    cb.pop2();
-                    cb.iaload();
-                    break;
-                case NEXT:
-                    // todo
-            }
-        }
-
-        public abstract void translate(CodeBlock cb, int op, int a, int b);
-    };
+    ;
 }
