@@ -2,6 +2,7 @@ package com.headius.dcpu;
 
 import me.qmx.jitescript.CodeBlock;
 import me.qmx.jitescript.JiteClass;
+import org.objectweb.asm.tree.LabelNode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
@@ -54,15 +55,22 @@ public class Translator {
                 int a = 0, b = 0;
                 boolean mem = false;
 
-                // translate all instructions
+                // decode instructions
+                List<Instruction> instructions = decode(dcpuWords);
+
+                // labels for jumps
+                LabelNode[] labels = new LabelNode[instructions.size()];
+                for (int i = 0; i < labels.length; i++) {
+                    labels[i] = new LabelNode();
+                }
+
+                // translate instructions
                 int pc = 0;
-                for (int i[] = new int[]{0}; i[0] < dcpuWords.length; i[0]++) {
-
-                    Instruction instr = Instruction.decode(dcpuWords, i);
-
-                    instr.translate(this);
+                for (Instruction instruction : instructions) {
+                    label(labels[pc]);
                     pushInt(pc);
                     istore(Constants.Base.PC.lvar());
+                    instruction.translate(this);
                 }
                 voidreturn();
             }});
