@@ -195,7 +195,7 @@ public abstract class Instruction {
                 }
                 break;
             case MEM:
-                cb.aload(Constants.Base.MEM.ordinal());
+                cb.aload(Constants.Base.MEM.lvar());
                 switch (target.base()) {
                     case NEXT:
                         cb.pushInt(value);

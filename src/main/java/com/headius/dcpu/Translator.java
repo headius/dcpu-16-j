@@ -45,16 +45,24 @@ public class Translator {
                 getfield(p(Machine.class), "ram", ci(int[].class));
                 astore(Constants.Base.MEM.lvar());
 
+                // initialize registers
+                for (int i = Constants.LVAR_OFFSET; i < Constants.Base.NEXT.lvar(); i++) {
+                    pushInt(0);
+                    istore(i);
+                }
+
                 int a = 0, b = 0;
                 boolean mem = false;
 
                 // translate all instructions
+                int pc = 0;
                 for (int i[] = new int[]{0}; i[0] < dcpuWords.length; i[0]++) {
 
                     Instruction instr = Instruction.decode(dcpuWords, i);
 
-                    System.out.println(instr);
                     instr.translate(this);
+                    pushInt(pc);
+                    istore(Constants.Base.PC.lvar());
                 }
                 voidreturn();
             }});
